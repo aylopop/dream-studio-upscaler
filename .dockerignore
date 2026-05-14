@@ -18,9 +18,9 @@ LICENSE
 deployment.yaml
 Makefile
 
-# The custom frontend lives in the nginx sidecar (projected via ConfigMap),
-# not inside the Forge image.
-frontend/
+# frontend/ is baked into the image (see Dockerfile) so a single artifact
+# carries the whole deployable. The k8s ConfigMap mount can still override
+# individual files at runtime for hot-reload.
 
 # Editor / OS noise
 .vscode

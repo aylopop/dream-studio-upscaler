@@ -150,7 +150,29 @@ RUN set -o pipefail; \
 RUN python -m pip cache purge || true \
  && rm -rf /root/.cache/uv /tmp/* /var/tmp/*
 
-EXPOSE 7860
+# ---------------------------------------------------------------------------
+# UI components baked into the same image so the whole deployable is a
+# single artifact. The k8s deployment.yaml runs three containers off this
+# image with different commands:
+#   - forgeui      → default CMD below (Forge API on :7860)
+#   - upscaler-ui  → command: ["nginx","-g","daemon off;"] (serves on :80)
+#   - save-sidecar → command: ["python3","/app/save-sidecar.py"] (port :8081)
+# The ConfigMap subPath mounts in deployment.yaml override the baked frontend
+# files for in-cluster hot reload via `make ui-reload`; standalone users get
+# the baked defaults.
+# ---------------------------------------------------------------------------
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends nginx \
+ && rm -rf /var/lib/apt/lists/* /var/log/nginx/*
+
+COPY frontend/index.html      /usr/share/nginx/html/index.html
+COPY frontend/config.json     /usr/share/nginx/html/config.json
+COPY frontend/logo.png        /usr/share/nginx/html/logo.png
+COPY frontend/logo-icon.svg   /usr/share/nginx/html/logo-icon.svg
+COPY frontend/nginx.conf      /etc/nginx/nginx.conf
+COPY frontend/save-sidecar.py /app/save-sidecar.py
+
+EXPOSE 7860 80 8081
 
 # API-only: --nowebui kills Gradio. The custom UI lives in the nginx sidecar.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=240s --retries=3 \

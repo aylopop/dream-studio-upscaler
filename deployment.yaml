@@ -110,8 +110,12 @@ spec:
           periodSeconds: 30
 
       # ----- nginx sidecar: serves the Dream Studio Upscaler UI -----
+      # Same image as forgeui; nginx is baked in alongside Forge so the whole
+      # stack ships as a single artifact. The ConfigMap subPath mounts below
+      # still override the baked frontend files for `make ui-reload`.
       - name: upscaler-ui
-        image: nginx:1.27-alpine
+        image: aylopop/dream-studio-upscaler:latest
+        command: ["nginx", "-g", "daemon off;"]
         ports:
         - containerPort: 80
           name: ui
@@ -172,11 +176,14 @@ spec:
       # picks up changes with no image rebuild. Listens on 127.0.0.1:8081
       # — only the nginx sidecar (same pod) talks to it.
       - name: save-sidecar
-        image: python:3.12-alpine
-        command: ["python", "/app/save-sidecar.py"]
+        image: aylopop/dream-studio-upscaler:latest
+        command: ["python3", "/app/save-sidecar.py"]
         volumeMounts:
+        # subPath so the ConfigMap overrides only the script file; the rest
+        # of /app (baked into the image) stays visible.
         - name: ui-save-script
-          mountPath: /app
+          mountPath: /app/save-sidecar.py
+          subPath: save-sidecar.py
         - name: dream-config
           mountPath: /srv/config
         resources:
