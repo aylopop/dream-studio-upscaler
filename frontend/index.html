@@ -158,10 +158,10 @@
   input[type="range"]::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: white; border: 0; box-shadow: 0 1px 3px rgba(0,0,0,0.5); cursor: pointer; }
 
   /* Picker */
-  .picker { display: inline-flex; align-items: center; gap: 4px; background: var(--surface-2); border-radius: 7px; padding: 4px 6px 4px 10px; cursor: pointer; color: var(--label); font-size: 13px; min-height: 26px; border: 0; }
+  .picker { display: inline-flex; align-items: center; gap: 6px; background: var(--surface-2); border-radius: 7px; padding: 4px 12px; cursor: pointer; color: var(--label); font-size: 13px; min-height: 26px; border: 0; }
   .picker:hover { background: var(--surface-3); }
   .picker svg { width: 14px; height: 14px; color: var(--label-3); }
-  .picker.full { width: 100%; justify-content: space-between; padding: 8px 10px 8px 14px; }
+  .picker.full { width: 100%; justify-content: space-between; padding: 8px 14px; }
   .picker .pv { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 360px; }
 
   /* Dropzone */
@@ -207,14 +207,15 @@
   .img-tools .iconbtn.active { background: rgba(10,132,255,0.9); }
   .img-tools .iconbtn.active:hover { background: rgba(10,132,255,1); }
 
-  /* Mini preview window — fixed at bottom-left of the viewport. Single
-     position, no responsive layout splits; if you don't want it use the
+  /* Mini preview window — fixed at bottom-right of the viewport. The wide
+     breakpoint nudges it left to clear #output-strip (right: 14px, width:
+     96px); narrow mode hugs the right edge. If you don't want it use the
      Preview off button in Advanced. */
   .mini-preview {
     display: none;
     position: fixed;
     bottom: 20px;
-    left: 20px;
+    right: 20px;
     width: 200px;
     z-index: 24;
     background: rgba(28,28,30,0.88);
@@ -298,6 +299,14 @@
   .toggle::after { content: ''; position: absolute; width: 18px; height: 18px; border-radius: 50%; background: white; top: 2px; left: 2px; box-shadow: 0 1px 3px rgba(0,0,0,0.4); transition: transform 160ms ease; }
   .toggle.on { background: var(--accent); }
   .toggle.on::after { transform: translateX(16px); }
+  /* Small inline switch — checkbox-driven so existing .checked logic still
+     works. Used for the "separate W × H" sub-control under Tile size. */
+  .switch-sm { position: relative; display: inline-block; width: 26px; height: 14px; flex-shrink: 0; }
+  .switch-sm input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; }
+  .switch-sm .switch-track { position: absolute; inset: 0; background: var(--surface-3); border-radius: 999px; transition: background 160ms ease; pointer-events: none; }
+  .switch-sm .switch-track::after { content: ''; position: absolute; width: 10px; height: 10px; border-radius: 50%; background: white; top: 2px; left: 2px; box-shadow: 0 1px 2px rgba(0,0,0,0.4); transition: transform 160ms ease; }
+  .switch-sm input:checked + .switch-track { background: var(--accent); }
+  .switch-sm input:checked + .switch-track::after { transform: translateX(12px); }
 
   .cn-body { display: none; padding: 0 16px 16px; }
   .cn-unit.open .cn-body { display: block; }
@@ -361,7 +370,7 @@
      inner body was also a descendant of `.disclosure.open`. Scoping to
      `>` so each disclosure controls only its own body. */
   .disclosure.open > .disclosure-body { display: block; }
-  .adv-row { display: grid; grid-template-columns: 130px 1fr 88px; align-items: center; gap: 14px; padding: 10px 0; }
+  .adv-row { display: grid; grid-template-columns: 130px 1fr 88px; align-items: center; gap: 14px; padding: 10px 16px; }
   .adv-row + .adv-row { border-top: 0.5px solid var(--separator); }
   .adv-row .name { font-size: 13.5px; color: var(--label); }
   .adv-row .val { color: var(--label-2); font-size: 13px; text-align: right; }
@@ -665,8 +674,13 @@
     /* Tighter row padding in a drawer so fewer screens of scroll. The
        inline page layout (no drawer) keeps the looser default for
        readability. */
-    .drawerable.drawer-open .adv-row { padding: 7px 0; gap: 12px; }
-    .drawerable.drawer-open .adv-row.text { padding: 8px 0; }
+    /* Match .card .row's 16px horizontal padding so every top-level row
+       (Upscaler picker via .row, Scale/Quality/etc via .adv-row, Negative
+       prompt via .adv-row.text) lines up at the same x inside a drawer.
+       Without the 16px Upscaler ends up the deepest because .card .row
+       keeps its own padding while .adv-row gets zeroed. */
+    .drawerable.drawer-open .adv-row { padding: 7px 16px; gap: 12px; }
+    .drawerable.drawer-open .adv-row.text { padding: 8px 16px; }
 
     /* Inside a drawer the disclosure-head chevrons and their toggle target
        are redundant — there's nothing else to collapse against, the whole
@@ -701,6 +715,11 @@
       padding: 4px 6px; z-index: 22;
     }
     #output-strip .thumb { width: 84px; height: 84px; }
+    /* In wide mode the right edge is occupied by #output-strip (14px gap +
+       96px). Push the mini-preview left so the strip's hit area — including
+       the Preview on/off picker accessible through the rail's Advanced
+       drawer — isn't covered. */
+    .mini-preview { right: 130px; }
   }
 </style>
 </head>
@@ -760,20 +779,6 @@
     <div class="card">
       <div class="prompt-area">
         <textarea id="prompt" spellcheck="false" placeholder="Describe what the upscaled image should look like…"></textarea>
-        <div class="prompt-bar">
-          <div class="anchor">
-            <button type="button" class="prompt-chip" id="style-trigger" title="Apply a saved style">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7l2 3h7v13H4z"/></svg>
-              <span id="style-val">Styles</span>
-            </button>
-            <div class="pop pop-left" id="style-pop" data-pop-align="left" style="min-width:260px"></div>
-          </div>
-          <button type="button" class="prompt-chip" id="save-style" title="Save current prompt as a style">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-            Save
-          </button>
-          <span class="grow"></span>
-        </div>
       </div>
     </div>
   </section>
@@ -977,13 +982,13 @@
               <div class="pop pop-right" id="upscaler-pop" data-pop-align="right" style="min-width:300px"></div>
             </div>
           </div>
-          <div class="row"><div class="control">
+          <div class="adv-row">
             <div class="name">Scale</div>
             <input type="range" min="1" max="8" step="0.05" value="2.75" id="scale" />
             <input type="number" class="val mono numin" id="scale-val" min="1" max="8" step="0.05" value="2.75" />
-          </div></div>
+          </div>
           <div class="adv-row">
-            <div class="name" title="Diffusion steps per tile. Higher = more detail and longer runs.">Quality</div>
+            <div class="name" title="Denoising passes per tile. More passes = longer runs and (up to a point) more detail; gains plateau and can drift past an optimum.">Passes</div>
             <input type="range" min="1" max="100" step="1" value="20" id="steps" />
             <input type="number" class="val mono numin" id="steps-val" min="1" max="100" step="1" value="20" />
           </div>
@@ -1003,8 +1008,11 @@
               <div class="adv-row">
                 <div class="name" style="display:flex; flex-direction:column; gap:4px;">
                   <span title="Size of each tile the image is split into for upscaling. Larger tiles = fewer seams but more VRAM.">Tile size</span>
-                  <label style="display:inline-flex; align-items:center; gap:5px; font-size:11px; color:var(--label-3); font-weight:400; cursor:pointer; user-select:none;">
-                    <input type="checkbox" id="tile-separate" style="margin:0; width:11px; height:11px; accent-color: var(--accent);" />
+                  <label style="display:inline-flex; align-items:center; gap:6px; font-size:11px; color:var(--label-3); font-weight:400; cursor:pointer; user-select:none;">
+                    <span class="switch-sm">
+                      <input type="checkbox" id="tile-separate" />
+                      <span class="switch-track"></span>
+                    </span>
                     separate W × H
                   </label>
                 </div>
@@ -1046,6 +1054,22 @@
       </div>
       <div class="disclosure-body">
         <!-- Prompt extras (moved out of the prompt area for a cleaner top half) -->
+        <div class="adv-row text" style="grid-template-columns: 130px 1fr;">
+          <div class="name">Style</div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <div class="anchor">
+              <button type="button" class="prompt-chip" id="style-trigger" title="Apply a saved style">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4h7l2 3h7v13H4z"/></svg>
+                <span id="style-val">Styles</span>
+              </button>
+              <div class="pop pop-left" id="style-pop" data-pop-align="left" style="min-width:260px"></div>
+            </div>
+            <button type="button" class="prompt-chip" id="save-style" title="Save current prompt as a new style">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+              Save
+            </button>
+          </div>
+        </div>
         <div class="adv-row text" style="grid-template-columns: 130px 1fr; align-items: flex-start;">
           <div class="name">Negative prompt</div>
           <textarea id="negative_prompt" spellcheck="false" placeholder="What to avoid (e.g. blurry, low quality)"></textarea>
@@ -1067,30 +1091,6 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
               <span id="autoprompt-label">Dream Assist</span>
             </button>
-          </div>
-        </div>
-        <!-- CLIP group -->
-        <div class="adv-row">
-          <div class="name">Clip skip</div>
-          <input type="range" min="1" max="12" step="1" value="1" id="clipskip" />
-          <input type="number" class="val mono numin" id="clipskip-val" min="1" max="12" step="1" value="1" />
-        </div>
-        <div class="adv-row text" style="grid-template-columns: 130px 1fr;">
-          <div class="name">Dream Assist CLIP</div>
-          <div class="anchor">
-            <div class="picker" id="autoprompt-clip-trigger">
-              <span class="pv" id="autoprompt-clip-val">ViT-L-14/laion2b_s32b_b82k</span>
-            </div>
-            <div class="pop pop-left" id="autoprompt-clip-pop" data-pop-align="left" style="min-width:280px"></div>
-          </div>
-        </div>
-        <div class="adv-row text" style="grid-template-columns: 130px 1fr;">
-          <div class="name">Dream Assist mode</div>
-          <div class="anchor">
-            <div class="picker" id="autoprompt-mode-trigger">
-              <span class="pv" id="autoprompt-mode-val">classic</span>
-            </div>
-            <div class="pop pop-left" id="autoprompt-mode-pop" data-pop-align="left" style="min-width:240px"></div>
           </div>
         </div>
         <!-- Strip words: comma-separated list. Each token is removed
@@ -1141,6 +1141,29 @@
             </span>
           </div>
           <div class="disclosure-body">
+            <div class="adv-row">
+              <div class="name">Clip skip</div>
+              <input type="range" min="1" max="12" step="1" value="1" id="clipskip" />
+              <input type="number" class="val mono numin" id="clipskip-val" min="1" max="12" step="1" value="1" />
+            </div>
+            <div class="adv-row text" style="grid-template-columns: 130px 1fr;">
+              <div class="name">Dream Assist CLIP</div>
+              <div class="anchor">
+                <div class="picker" id="autoprompt-clip-trigger">
+                  <span class="pv" id="autoprompt-clip-val">ViT-L-14/laion2b_s32b_b82k</span>
+                </div>
+                <div class="pop pop-left" id="autoprompt-clip-pop" data-pop-align="left" style="min-width:280px"></div>
+              </div>
+            </div>
+            <div class="adv-row text" style="grid-template-columns: 130px 1fr;">
+              <div class="name">Dream Assist mode</div>
+              <div class="anchor">
+                <div class="picker" id="autoprompt-mode-trigger">
+                  <span class="pv" id="autoprompt-mode-val">classic</span>
+                </div>
+                <div class="pop pop-left" id="autoprompt-mode-pop" data-pop-align="left" style="min-width:240px"></div>
+              </div>
+            </div>
             <div class="adv-row text" style="grid-template-columns: 130px 1fr;">
               <div class="name">VRAM</div>
               <div id="vram-widget" style="font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; color: var(--label-2);">
@@ -1938,7 +1961,7 @@ const state = {
   upscalers: [],
   upscalerIdx: 0,
   samplers: [],
-  sampler: "",
+  sampler: "DPM++ 2M",
   schedulers: [],
   scheduler: "Karras",
   models: [],                  // {title, model_name}

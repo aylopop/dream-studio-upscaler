@@ -53,8 +53,8 @@ those lines in the Dockerfile.
 - **ControlNet × 3** with per-unit preprocessor, model, image, weight,
   guidance start/end, pixel-perfect toggle.
 - Scale slider (default ×2).
-- **Advanced disclosure** (hidden): steps (30), tile width/height (1408),
-  mask blur, padding, **batch input directory**.
+- **Advanced disclosure** (hidden): passes (a.k.a. diffusion steps), tile
+  width/height, mask blur, padding, **batch input directory**.
 - **Batch mode** — when Batch input is set, the UI lists the folder via the
   sidecar's `/nas/` autoindex and processes every image in sequence.
 - **Editable config** — `frontend/config.json` is the source of truth for
@@ -232,8 +232,6 @@ the upstream URL.
   failure mode.
 - **`--nowebui --api`.** Forge's Gradio UI is dead weight when the custom
   frontend is the only consumer.
-- **DAT x4 default.** Best quality/speed tradeoff on photoreal inputs.
-- **Tile 1408 default.** Sweet spot for 24-32 GB Blackwell at SDXL resolutions.
 
 ## Troubleshooting
 
