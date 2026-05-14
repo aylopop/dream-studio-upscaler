@@ -1,0 +1,61 @@
+# =============================================================================
+# Build context filter. Forge's source is large; this keeps `docker build`
+# uploads tight and reproducible.
+# =============================================================================
+
+# Git
+.git
+.gitignore
+.gitattributes
+**/.git
+**/.gitignore
+**/.gitattributes
+
+# Docs & project meta — not needed inside the image
+README.md
+CHANGELOG.md
+LICENSE
+deployment.yaml
+Makefile
+
+# The custom frontend lives in the nginx sidecar (projected via ConfigMap),
+# not inside the Forge image.
+frontend/
+
+# Editor / OS noise
+.vscode
+.idea
+*.swp
+.DS_Store
+Thumbs.db
+**/.DS_Store
+
+# Python artifacts in the vendored forks
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.egg-info
+**/.pytest_cache
+**/.mypy_cache
+
+# Heavy / runtime-only paths inside the Forge tree. We mount these at runtime;
+# baking them in just bloats the image and the build context.
+forge/log/**
+forge/cache/**
+forge/tmp/**
+forge/venv/**
+forge/.cache/**
+forge/repositories/**
+# Keep forge/models/, outputs/, embeddings/ directory structure (Forge expects
+# the subdirs), but any actual weights are gitignored and mounted at runtime.
+
+# Vendored-fork docs and assets we don't need in the image
+**/docs/_build/
+**/dist/
+**/build/
+node_modules/
+
+# Local archives
+*.tar.gz
+*.tgz
+*.zip

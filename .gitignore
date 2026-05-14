@@ -1,0 +1,42 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+
+# Runtime-only paths inside the vendored Forge tree. The model weights, output
+# images, embeddings, caches etc. are mounted at deploy time — never committed.
+forge/models/Stable-diffusion/*
+forge/models/Lora/*
+forge/models/VAE/*
+forge/models/ESRGAN/*
+forge/models/ControlNet/*
+forge/models/embeddings/*
+forge/models/text_encoder/*
+forge/embeddings/*
+forge/outputs/
+forge/log/
+forge/cache/
+forge/tmp/
+forge/venv/
+forge/.cache/
+forge/repositories/
+!forge/models/*/Put*Here.txt
+!forge/models/*/.gitkeep
+
+# Local build/test artifacts
+*.tar.gz
+*.tgz
+*.zip
+build/
+dist/
+node_modules/

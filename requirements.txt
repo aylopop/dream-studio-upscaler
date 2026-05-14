@@ -1,0 +1,26 @@
+# =============================================================================
+# Overrides applied on top of Forge Neo's requirements.txt.
+#
+# Forge Neo's own pins (numpy 2.3.5, scikit-image 0.25.2, pydantic 2.10.6,
+# fastapi 0.127.1) are numpy-2-native, so the ABI mismatch that broke the
+# old lllyasviel image is structurally resolved.
+#
+# The Dockerfile's pre-emptive purge step (numpy/scipy/scikit-image/
+# scikit-learn/opencv/pydantic/fastapi/gradio) ensures we don't import any
+# conda-preinstalled .so files that were linked against a different numpy
+# than Forge Neo's pin, so most of the defensive overrides v2 had are no
+# longer needed.
+#
+# This file exists for the small number of pins we keep as source-of-truth
+# regardless of upstream drift.
+# =============================================================================
+
+# Build tooling — Forge Neo's requirements pin this exact version.
+setuptools==69.5.1
+
+# Typing extensions — gradio 4.40, fastapi 0.127, transformers 4.56 all want >=4.12.
+typing-extensions>=4.12
+
+# Forge Neo's full pin set is pulled in by the Dockerfile via
+#   -r /opt/webui/requirements.txt
+# alongside this file, so all constraints resolve as one graph.

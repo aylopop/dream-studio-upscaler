@@ -1,0 +1,38 @@
+{
+  "_comment": "Dream Studio Upscaler config. Edit this file and run `make ui-reload` to apply. Anything missing falls back to the built-in defaults in index.html.",
+
+  "defaults": {
+    "cfg": 5,
+    "denoise": 0.5,
+    "steps": 20,
+    "scale": 2.75,
+    "tile_width": 1408,
+    "tile_height": 1408,
+    "mask_blur": 8,
+    "padding": 32,
+    "upscaler_preferred": "DAT_x4",
+    "sampler_preferred": "DPM++ 2M",
+    "scheduler_preferred": "Karras",
+    "model_preferred": "anime-upscaler-fp16.safetensors",
+    "prompt_default": "",
+    "negative_default": ""
+  },
+
+  "styles": [
+    {
+      "name": "Photoreal detail",
+      "prompt": "photoreal, detailed skin texture, sharp focus, natural pores, 35mm film grain",
+      "negative": "blurry, low quality, plastic skin, oversharpened, jpeg artifacts"
+    },
+    {
+      "name": "Clean illustration",
+      "prompt": "clean linework, vibrant colors, detailed background, crisp edges",
+      "negative": "blurry, watermark, text, jpeg artifacts"
+    },
+    {
+      "name": "Subtle restore",
+      "prompt": "preserve original details, photoreal, sharp focus",
+      "negative": "blurry, low quality, plastic, oversaturated"
+    }
+  ]
+}

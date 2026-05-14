@@ -1,0 +1,267 @@
+# =============================================================================
+# Dream Studio Upscaler — k3s Deployment & Service
+#
+# Pod layout:
+#   ┌───────────────────────────────────────────────────────────┐
+#   │ Pod: dream-studio-upscaler                                        │
+#   │                                                            │
+#   │  ┌──────────────────┐   localhost   ┌─────────────────┐   │
+#   │  │ forgeui          │ ←──────────── │ upscaler-ui     │   │
+#   │  │ aylopop/         │   :7860 API   │ nginx:alpine    │   │
+#   │  │   dream-studio-upscaler  │  (--nowebui)  │ serves UI       │   │
+#   │  │ port 7860 (API)  │               │ proxies /sdapi/ │   │
+#   │  └──────────────────┘               │ port 80         │   │
+#   │                                      └─────────────────┘   │
+#   └────────────────────────────────────────────┬───────────────┘
+#                                                 │
+#                              Service type LoadBalancer, nodePort 31310
+#
+# The user hits the LoadBalancer (or port 31310 directly on any node) → nginx
+# → clean Dream Studio Upscaler UI.
+# Forge's FastAPI is NOT exposed publicly — hit it inside the cluster (or via
+# `kubectl port-forward`) if you ever need /docs.
+#
+# Layout on the host (k3s node `gigatorch`):
+#
+#   /mnt/AI/Diffusion/
+#   ├── Models/
+#   │   ├── Stable-diffusion/  Lora/  VAE/  ControlNet/  ESRGAN/  DAT/
+#   │   ├── embeddings/
+#   │   ├── config/            (Forge's config.json)
+#   │   └── Cache/{hf,torch,cuda}/
+#   └── External/              (Forge outputs land here — also the batch root)
+#                              └── batch/<run-name>/  ← drop inputs here
+#
+# /mnt/AI/Diffusion/External is mounted twice:
+#   - into the Forge container at /opt/webui/outputs (read-write, for saves)
+#   - into the nginx sidecar  at /nas              (read-only, for browsing)
+# So a UI batch field of `batch/runs1` resolves to /nas/batch/runs1, which
+# is /mnt/AI/Diffusion/External/batch/runs1 on the host. Results from each
+# run land back under External/ via Forge's normal save path.
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# The `upscaler-ui-files` ConfigMap is owned by the Makefile (`make
+# apply-ui-config` projects frontend/{index.html,nginx.conf,config.json,logo.png} into
+# it via `kubectl create configmap --from-file=... --dry-run | kubectl apply`).
+# It is intentionally NOT defined here — shipping a stub with empty values
+# would clobber the real content on every `kubectl apply -f deployment.yaml`.
+# -----------------------------------------------------------------------------
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dream-studio-upscaler
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  # Single GPU + replicas:1 — RollingUpdate deadlocks because the new pod can't
+  # schedule onto the GPU the old pod still holds. Recreate kills first, then
+  # starts: a few seconds of downtime per rollout, no stuck-Pending state.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: dream-studio-upscaler
+  template:
+    metadata:
+      labels:
+        app: dream-studio-upscaler
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: gigatorch
+      runtimeClassName: nvidia
+
+      containers:
+      # ----- Forge (image generation API, --nowebui) -----
+      - name: forgeui
+        image: aylopop/dream-studio-upscaler:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 7860
+          name: forge-api
+        volumeMounts:
+        - { name: sd-models,    mountPath: /opt/webui/models }
+        - { name: embeddings,   mountPath: /opt/webui/embeddings }
+        - { name: config-dir,   mountPath: /opt/webui/config }
+        - { name: outputs,      mountPath: /opt/webui/outputs }
+        - { name: dshm,         mountPath: /dev/shm }
+        - { name: hf-cache,     mountPath: /root/.cache/huggingface }
+        - { name: torch-cache,  mountPath: /root/.cache/torch }
+        - { name: cuda-cache,   mountPath: /root/.cache/cuda }
+        # clip-interrogator's own prompt-embedding cache (~few hundred MB
+        # after first warmup). BLIP/CLIP weight files themselves land in
+        # hf-cache/torch-cache via HF and openclip respectively.
+        - { name: ci-cache,     mountPath: /root/.cache/clip-interrogator }
+        resources:
+          requests:
+            memory: "8Gi"
+          limits:
+            # 200Gi is intentional — lets the kernel swap cold pages during
+            # model-load spikes without cgroup OOM firing.
+            memory: "200Gi"
+            nvidia.com/gpu: 1
+        # /docs is FastAPI's swagger UI, always on under --nowebui --api.
+        startupProbe:
+          httpGet: { path: /docs, port: 7860 }
+          periodSeconds: 10
+          failureThreshold: 60
+        readinessProbe:
+          httpGet: { path: /docs, port: 7860 }
+          periodSeconds: 30
+
+      # ----- nginx sidecar: serves the Dream Studio Upscaler UI -----
+      - name: upscaler-ui
+        image: nginx:1.27-alpine
+        ports:
+        - containerPort: 80
+          name: ui
+        volumeMounts:
+        # The frontend ConfigMap projects index.html, nginx.conf,
+        # config.json, and logo.png into the right places.
+        - name: ui-html
+          mountPath: /usr/share/nginx/html/index.html
+          subPath: index.html
+        - name: ui-cfg-json
+          mountPath: /usr/share/nginx/html/config.json
+          subPath: config.json
+        - name: ui-logo
+          mountPath: /usr/share/nginx/html/logo.png
+          subPath: logo.png
+        - name: ui-logo-icon
+          mountPath: /usr/share/nginx/html/logo-icon.svg
+          subPath: logo-icon.svg
+        - name: ui-conf
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
+        # NAS-hosted, hot-reloadable config + styles. Mounted read-only
+        # here — writes go through the save-sidecar (port 8081) so a
+        # compromised frontend can't tamper with the file. nginx try_files
+        # in /config.json and /styles.json prefer this dir over the
+        # bundled defaults, so editing on disk = no rebuild.
+        - name: dream-config
+          mountPath: /usr/share/nginx/html/nas
+          readOnly: true
+        # Read-only LoRA dir so nginx can serve the JSON directory listing
+        # that the frontend uses to populate its LoRA picker.
+        - name: sd-models
+          mountPath: /loras
+          subPath: Lora
+          readOnly: true
+        # Same hostPath as Forge's outputs, mounted read-only as the program
+        # "home" for the UI's batch field. Type `batch/runs1` and it resolves
+        # to /nas/batch/runs1 → /mnt/AI/Diffusion/External/batch/runs1.
+        - name: outputs
+          mountPath: /nas
+          readOnly: true
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu:    "10m"
+          limits:
+            memory: "128Mi"
+            cpu:    "200m"
+        readinessProbe:
+          httpGet: { path: /healthz, port: 80 }
+          periodSeconds: 10
+
+      # ----- save-sidecar: handles PUT /save/{config,styles}.json -----
+      # Stdlib-only Python HTTP server (~80 lines) that snapshots the
+      # prior file into <dir>/backups/<stem>-<ts>.json on every write,
+      # then atomically replaces the live file. The script is projected
+      # in from the same ConfigMap as nginx.conf, so `make ui-reload`
+      # picks up changes with no image rebuild. Listens on 127.0.0.1:8081
+      # — only the nginx sidecar (same pod) talks to it.
+      - name: save-sidecar
+        image: python:3.12-alpine
+        command: ["python", "/app/save-sidecar.py"]
+        volumeMounts:
+        - name: ui-save-script
+          mountPath: /app
+        - name: dream-config
+          mountPath: /srv/config
+        resources:
+          requests:
+            memory: "32Mi"
+            cpu:    "5m"
+          limits:
+            memory: "96Mi"
+            cpu:    "100m"
+        readinessProbe:
+          httpGet: { path: /healthz, port: 8081 }
+          periodSeconds: 30
+
+      volumes:
+      - name: sd-models
+        hostPath:
+          path: /mnt/AI/Diffusion/Models
+      - name: embeddings
+        hostPath:
+          path: /mnt/AI/Diffusion/Models/embeddings
+      - name: config-dir
+        hostPath:
+          path: /mnt/AI/Diffusion/Models/config
+      - name: outputs
+        hostPath:
+          path: /mnt/AI/Diffusion/External
+      - name: hf-cache
+        hostPath: { path: /mnt/AI/Diffusion/Models/Cache/hf,    type: DirectoryOrCreate }
+      - name: torch-cache
+        hostPath: { path: /mnt/AI/Diffusion/Models/Cache/torch, type: DirectoryOrCreate }
+      - name: cuda-cache
+        hostPath: { path: /mnt/AI/Diffusion/Models/Cache/cuda,  type: DirectoryOrCreate }
+      - name: ci-cache
+        hostPath: { path: /mnt/AI/Diffusion/Models/Cache/clip-interrogator, type: DirectoryOrCreate }
+      - name: dshm
+        emptyDir: { medium: Memory, sizeLimit: 8Gi }
+      - name: ui-html
+        configMap:
+          name: upscaler-ui-files
+          items: [{ key: index.html, path: index.html }]
+      - name: ui-cfg-json
+        configMap:
+          name: upscaler-ui-files
+          items: [{ key: config.json, path: config.json }]
+      - name: ui-logo
+        configMap:
+          name: upscaler-ui-files
+          items: [{ key: logo.png, path: logo.png }]
+      - name: ui-logo-icon
+        configMap:
+          name: upscaler-ui-files
+          items: [{ key: logo-icon.svg, path: logo-icon.svg }]
+      - name: ui-conf
+        configMap:
+          name: upscaler-ui-files
+          items: [{ key: nginx.conf, path: nginx.conf }]
+      - name: ui-save-script
+        configMap:
+          name: upscaler-ui-files
+          items: [{ key: save-sidecar.py, path: save-sidecar.py }]
+      # NAS-hosted hot-reloadable config + styles for the UI. Sits next
+      # to (but separate from) Forge's own config dir so renames or
+      # rewrites can't collide with Forge's `config.json`. nginx mounts
+      # this read-only; the save-sidecar mounts it read-write for the
+      # PUT /save/* endpoint that snapshots + atomically replaces files.
+      - name: dream-config
+        hostPath:
+          path: /mnt/AI/Diffusion/Models/dream-config
+          type: DirectoryOrCreate
+
+---
+# -----------------------------------------------------------------------------
+# Public Service: exposes the nginx sidecar (port 80). Forge's API stays
+# pod-internal.
+# -----------------------------------------------------------------------------
+apiVersion: v1
+kind: Service
+metadata:
+  name: dream-studio-upscaler
+spec:
+  type: LoadBalancer
+  selector:
+    app: dream-studio-upscaler
+  ports:
+  - name: http
+    port: 80
+    targetPort: 80
+    nodePort: 31310
