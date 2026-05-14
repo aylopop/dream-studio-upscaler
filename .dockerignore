@@ -18,9 +18,9 @@ LICENSE
 deployment.yaml
 Makefile
 
-# The custom frontend lives in the nginx sidecar (projected via ConfigMap),
-# not inside the Forge image.
-frontend/
+# The custom frontend is baked into the UI image (Dockerfile.ui). The Forge
+# image (./Dockerfile) doesn't COPY it, so the only cost of including it in
+# the build context is a few hundred KB of upload time on the backend build.
 
 # Editor / OS noise
 .vscode

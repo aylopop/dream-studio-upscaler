@@ -20,20 +20,36 @@ DEPLOY       ?= dream-studio-upscaler
 
 DATE_TAG := $(shell date +%Y%m%d)
 IMAGE    := $(REGISTRY)/$(IMAGE_NAME)
+IMAGE_UI := $(REGISTRY)/$(IMAGE_NAME)-ui
 
-.PHONY: help build push deploy apply-ui-config ui-reload rollout logs logs-attention logs-save shell status
+.PHONY: help build build-ui build-all push push-ui push-all deploy apply-ui-config ui-reload rollout logs logs-attention logs-save shell status
 
 help:
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/^## //'
 
-## build      build :latest + :<date> images from local forks
+## build      build :latest + :<date> Forge backend image from local forks
 build:
 	docker build -t $(IMAGE):latest -t $(IMAGE):$(DATE_TAG) .
 
-## push       push both tags to the registry
+## build-ui   build :latest + :<date> nginx UI image (frontend/ baked in)
+build-ui:
+	docker build -f Dockerfile.ui -t $(IMAGE_UI):latest -t $(IMAGE_UI):$(DATE_TAG) .
+
+## build-all  build both backend and UI images
+build-all: build build-ui
+
+## push       push backend tags to the registry
 push:
 	docker push $(IMAGE):latest
 	docker push $(IMAGE):$(DATE_TAG)
+
+## push-ui    push UI tags to the registry
+push-ui:
+	docker push $(IMAGE_UI):latest
+	docker push $(IMAGE_UI):$(DATE_TAG)
+
+## push-all   push both backend and UI tags
+push-all: push push-ui
 
 ## deploy     apply Deployment + Service, then load the UI ConfigMap and roll
 deploy:

@@ -110,8 +110,12 @@ spec:
           periodSeconds: 30
 
       # ----- nginx sidecar: serves the Dream Studio Upscaler UI -----
+      # Custom image bakes frontend/ in so standalone `docker run` users
+      # get a working UI without a ConfigMap. The volumeMounts below
+      # (subPath into /usr/share/nginx/html/<file>) still override the
+      # baked defaults, so `make ui-reload` keeps hot-reloading.
       - name: upscaler-ui
-        image: nginx:1.27-alpine
+        image: aylopop/dream-studio-upscaler-ui:latest
         ports:
         - containerPort: 80
           name: ui

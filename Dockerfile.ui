@@ -1,0 +1,13 @@
+# Dream Studio Upscaler — UI sidecar image
+#
+# Stock nginx with the frontend baked in. End users get a working UI by
+# pulling this image alone; the k8s deployment.yaml keeps its ConfigMap
+# subPath mounts on top so `make ui-reload` can still hot-swap files
+# without a full rebuild (subPath mounts override the baked defaults).
+FROM nginx:1.27-alpine
+
+COPY frontend/index.html    /usr/share/nginx/html/index.html
+COPY frontend/config.json   /usr/share/nginx/html/config.json
+COPY frontend/logo.png      /usr/share/nginx/html/logo.png
+COPY frontend/logo-icon.svg /usr/share/nginx/html/logo-icon.svg
+COPY frontend/nginx.conf    /etc/nginx/nginx.conf
