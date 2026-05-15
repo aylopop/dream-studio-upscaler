@@ -1,158 +1,65 @@
-# Giga Upscaler
+# Dream Studio Upscaler
 
-A single-purpose upscaling app. Forge (vendored Neo fork) runs API-only;
-a custom Apple-style HTML UI is served from an nginx sidecar in the same pod.
-Built for Blackwell (RTX 5090, sm_120) on Kubernetes.
+A focused AI upscaling interface for Forge + Ultimate SD Upscale.
 
-This is **my fork**. Forge Neo and Ultimate SD Upscale are vendored as local
-source trees, not cloned at build time, because both upstreams are
-unmaintained / drift-prone. The build is **mostly** reproducible from this
-repo — the base image tag and a handful of optional preprocessor deps
-(`fvcore`, `mediapipe`, `onnxruntime`, `svglib`, `handrefinerportable`,
-`depth-anything`, `bitsandbytes>=0.49.1`) are not digest- or version-pinned.
-For fully reproducible builds, pin the `FROM` line to a digest and tighten
-those lines in the Dockerfile.
+One screen, no tabs. Forge runs API-only; a custom HTML UI is served from
+an nginx sidecar in the same pod. Built for Blackwell (RTX 5090, sm_120)
+on Kubernetes.
 
-## What it is
+Forge Neo and Ultimate SD Upscale are vendored as local source trees so
+the build can't be broken by upstream churn. To swap to a different
+fork, replace the contents of `forge/` or `ultimate-upscale/` — nothing
+else in the project references the upstream URLs.
 
-- **One screen**, no tabs, no clutter.
-- **Auto1111 / Forge img2img** under the hood — the same upscaling workflow
-  that works reliably — but with everything that isn't upscaling stripped out.
-- **Ultimate SD Upscale** script is the only generation path. Tile-based
-  refinement with optional ControlNet × 3.
+---
 
-## Folder structure
+## The UI
 
-```
-.
-├── Dockerfile               # Forge backend image (Blackwell-tuned, API-only)
-├── Makefile                 # build / push / deploy / ui-reload / logs / shell
-├── requirements.txt         # thin pip overrides on top of Forge's pins
-├── .dockerignore            # tight build context filter
-├── README.md
-│
-├── forge/                   # ← vendored Forge Neo fork (the engine)
-├── ultimate-upscale/        # ← vendored Ultimate SD Upscale extension fork
-│
-└── frontend/                # the UI (projected into the nginx sidecar)
-    ├── index.html
-    ├── nginx.conf
-    └── config.json          # editable defaults + saved styles
-```
+A single page, organised top to bottom on narrow screens and as a
+left-rail-with-drawers on wide screens.
 
-## Features
+### Main
 
-- Upscaler picker at the top (defaults to DAT x4 if installed).
-- Prompt + negative prompt + textual-inversion chips.
-- **Saved styles** — apply named prompt/negative pairs from `frontend/config.json`,
-  save new ones from the UI.
-- CFG (default 5), Denoise (default 0.5), Sampler picker (defaults to Euler a).
-- Checkpoint + LoRA in one combined picker.
-- Single large drag-and-drop image surface. The result replaces the source
-  in-place — no separate preview pane.
-- **ControlNet × 3** with per-unit preprocessor, model, image, weight,
-  guidance start/end, pixel-perfect toggle.
-- Scale slider (default ×2).
-- **Advanced disclosure** (hidden): passes (a.k.a. diffusion steps), tile
-  width/height, mask blur, padding, **batch input directory**.
-- **Batch mode** — when Batch input is set, the UI lists the folder via the
-  sidecar's `/nas/` autoindex and processes every image in sequence.
-- **Editable config** — `frontend/config.json` is the source of truth for
-  defaults and styles. Edit it, run `make ui-reload`, refresh.
+- **Prompt** — prompt + negative prompt, textual-inversion chips,
+  applied saved styles.
+- **Image drop/result surface** — one large drag-and-drop area. The
+  upscaled result replaces the source in-place. A source/result A/B
+  compare slider opens on the same surface.
 
-## Build
+### Tuning
 
-```sh
-docker build -t giga-upscaler:dev .
-```
+CFG, denoise, steps, sampler, scheduler, seed, scale, checkpoint, LoRAs.
+Saved styles live here too — apply a named prompt/negative pair from
+`frontend/config.json`, or save a new one from the UI.
 
-The build COPYs in `forge/` and `ultimate-upscale/` from this repo. There are
-no build args. To change Forge or Ultimate Upscale, edit those folders.
+### ControlNet
 
-`make build` builds with `:test` and `:YYYYMMDD` tags.
+Up to three units. Per-unit preprocessor, model, image, weight,
+guidance start/end, control mode. Family-mismatch and missing-model
+guards run before any request hits Forge.
 
-**`make build` puts the image in Docker's local cache**, which is not what
-k3s/containerd reads from. To run a freshly-built image on the cluster you
-need to either `make push` to your registry (with `imagePullPolicy: Always`,
-which is the default in `deployment.yaml`) or import the tarball into
-containerd on the node:
+### Upscaler
 
-```sh
-docker save aylopop/giga-upscaler:test | sudo k3s ctr images import -
-```
+Upscaler picker (DAT × 4 by default when installed), tile width/height,
+mask blur, padding.
 
-The usual flow is `make build && make push && make deploy`.
+### Advanced
 
-## Deploy
+Variants, variant jitter, Dream Assist (CLIP interrogate),
+batch input directory, queue panel (with pause + clear), diagnostics,
+Forge state inspector, debug log download.
 
-The Makefile expects a `deployment.yaml` in this directory that:
-1. Runs the Forge container with the image you built.
-2. Runs an `nginx:1.27-alpine` sidecar consuming the `upscaler-ui-files`
-   ConfigMap as `/usr/share/nginx/html` and `/etc/nginx/nginx.conf`.
-3. Mounts your LoRA hostPath into the sidecar at `/loras` (read-only).
-4. Mounts a "browse root" hostPath at `/nas` (read-only) — the program "home"
-   for typeable batch paths.
+**Batch mode**: type a path into Batch input (resolves under the
+sidecar's `/nas/` mount), hit Upscale, the UI lists the folder via
+nginx autoindex and processes every image. Combine with Variants > 1
+for N runs per file.
 
-`deployment.yaml` is where you bind all the env-specific hostPaths. Nothing
-else in the project references your filesystem layout.
+---
 
-```sh
-make deploy       # apply ConfigMap + Deployment + Service
-make ui-reload    # re-project frontend/ into the sidecar (no rebuild)
-make rollout      # restart the deployment (picks up a new :test image)
-make logs
-make shell
-make status
-```
+## Configuration
 
-To iterate on the UI: edit `frontend/{index.html,config.json,nginx.conf}`,
-run `make ui-reload`, refresh.
-
-## Volume mounts inside the Forge container
-
-| Path                         | Contents                                          |
-|------------------------------|---------------------------------------------------|
-| `/opt/webui/models`          | Checkpoints, LoRAs, VAEs, ControlNet, upscalers   |
-| `/opt/webui/embeddings`      | Textual inversion embeddings                      |
-| `/opt/webui/outputs`         | Generated images                                  |
-| `/opt/webui/config`          | Forge settings file (`config.json`)               |
-| `/root/.cache/huggingface`   | HF hub cache                                      |
-| `/dev/shm`                   | Bump to ≥4 GiB (k8s default 64 MiB SIGBUSes)      |
-
-### Where each model type lives on disk
-
-Forge picks models up from subdirs under `/opt/webui/models/`. On the host
-that's `/mnt/Diffusion/Models/<subdir>/`:
-
-| Model type                | Subdir under `models/`     | File extensions          |
-|---------------------------|----------------------------|--------------------------|
-| Checkpoint (SD/SDXL/etc.) | `Stable-diffusion/`        | `.safetensors`, `.ckpt`  |
-| LoRA                      | `Lora/`                    | `.safetensors`, `.pt`    |
-| VAE                       | `VAE/`                     | `.safetensors`, `.pt`    |
-| ControlNet                | `ControlNet/`              | `.safetensors`, `.pth`   |
-| Upscaler — ESRGAN family  | `ESRGAN/`                  | `.pth`, `.safetensors`   |
-| Upscaler — DAT            | `DAT/`                     | `.pth`, `.safetensors`   |
-| Upscaler — SwinIR         | `SwinIR/`                  | `.pth`                   |
-| Upscaler — HAT            | `HAT/`                     | `.pth`                   |
-| Upscaler — RealESRGAN     | `RealESRGAN/`              | `.pth`                   |
-| Textual inversion         | `embeddings/` (top-level)  | `.safetensors`, `.pt`    |
-
-After dropping files into any of these directories, click the **Refresh**
-icon in the topbar (or run `make rollout` if the cache is being stubborn) to
-re-scan disk. The refresh button calls `refresh-checkpoints`/`-loras`/`-vae`
-and re-fetches the upscaler and ControlNet lists.
-
-### Reading logs
-
-`make logs` tails Forge live. For sharing or debugging an HTTP 500, run
-`make logs-save` — it writes the last 24 hours of both containers' logs to
-`./logs/giga-upscaler-<timestamp>.log`. The UI also prints the full Forge
-response body to the browser DevTools console on any non-2xx response, with
-the short reason mirrored into the status line.
-
-## Editing defaults and styles
-
-`frontend/config.json` is loaded on every page open:
+`frontend/config.json` is the source of truth for defaults and saved
+styles. Edit it, run `make ui-reload`, refresh.
 
 ```json
 {
@@ -174,30 +81,108 @@ the short reason mirrored into the status line.
 }
 ```
 
-Hitting **Save** in the UI stores the style in `localStorage` and logs the
-JSON snippet to the browser console so you can paste it into `config.json` to
-make it portable.
+Saving a style in the UI persists it to `localStorage` and logs the
+JSON snippet to the browser console so it can be pasted back into
+`config.json` to make it portable.
 
-## Batch mode
+---
 
-The nginx sidecar exposes a `/nas/` location whose hostPath is set in
-`deployment.yaml`. The **Batch input** field in the UI's Advanced section
-accepts paths relative to that mount.
+## Build
 
-1. In `deployment.yaml`, bind the `nas` volume's hostPath to whatever host
-   directory contains your source images.
-2. In the UI, open **Advanced** and type a path into **Batch input** —
-   e.g. `images/run-2024` resolves to `/nas/images/run-2024/`. Absolute paths
-   (starting with `/`) pass through unchanged.
-3. Hit **Upscale**. The UI lists the folder via autoindex, sends each file
-   through `/sdapi/v1/img2img` with the Ultimate SD Upscale script, and Forge
-   saves results to `/opt/webui/outputs` (whose hostPath you also set in
-   `deployment.yaml`).
+```sh
+docker build -t dream-studio-upscaler:dev .
+```
+
+The build COPYs `forge/` and `ultimate-upscale/` from this repo. No
+build args. To change either, edit the folders.
+
+`make build` builds with `:test` and `:YYYYMMDD` tags.
+
+`make build` only puts the image in Docker's local cache — k3s/containerd
+reads from its own store. To run a freshly-built image on the cluster,
+either `make push` to your registry (with `imagePullPolicy: Always`,
+the default in `deployment.yaml`) or import the tarball into containerd
+on the node:
+
+```sh
+docker save aylopop/dream-studio-upscaler:test | sudo k3s ctr images import -
+```
+
+Typical flow: `make build && make push && make deploy`.
+
+---
+
+## Deploy
+
+`deployment.yaml` describes a single pod with two containers:
+
+- **`forgeui`** — Forge backend on `:7860`. ~11 GB image, cold start
+  takes minutes; the startup probe has a long grace window on purpose.
+- **`upscaler-ui`** — `nginx:1.27-alpine` sidecar on `:80`, serves
+  `frontend/` from the `upscaler-ui-files` ConfigMap.
+
+Pod is `2/2` only when both pass probes (`1/2` typically means Forge is
+still loading; `0/2` means neither container is ready yet).
+
+```sh
+make deploy       # apply ConfigMap + Deployment + Service
+make ui-reload    # re-project frontend/ into the sidecar (no rebuild)
+make rollout      # restart the deployment (picks up a new :test image)
+make logs
+make logs-save    # dump last 24h of both containers to ./logs/
+make shell
+make status
+```
+
+To iterate on the UI only: edit `frontend/{index.html,config.json,nginx.conf}`,
+run `make ui-reload`, refresh.
+
+---
+
+## Volume mounts
+
+Inside the Forge container:
+
+| Path                         | Contents                                          |
+|------------------------------|---------------------------------------------------|
+| `/opt/webui/models`          | Checkpoints, LoRAs, VAEs, ControlNet, upscalers   |
+| `/opt/webui/embeddings`      | Textual inversion embeddings                      |
+| `/opt/webui/outputs`         | Generated images                                  |
+| `/opt/webui/config`          | Forge settings file (`config.json`)               |
+| `/root/.cache/huggingface`   | HF hub cache                                      |
+| `/dev/shm`                   | Bump to ≥4 GiB (k8s default 64 MiB SIGBUSes)      |
+
+Forge picks model files up from subdirs under `/opt/webui/models/`:
+
+| Model type                | Subdir under `models/`     | Extensions               |
+|---------------------------|----------------------------|--------------------------|
+| Checkpoint (SD/SDXL/etc.) | `Stable-diffusion/`        | `.safetensors`, `.ckpt`  |
+| LoRA                      | `Lora/`                    | `.safetensors`, `.pt`    |
+| VAE                       | `VAE/`                     | `.safetensors`, `.pt`    |
+| ControlNet                | `ControlNet/`              | `.safetensors`, `.pth`   |
+| Upscaler — ESRGAN family  | `ESRGAN/`                  | `.pth`, `.safetensors`   |
+| Upscaler — DAT            | `DAT/`                     | `.pth`, `.safetensors`   |
+| Upscaler — SwinIR         | `SwinIR/`                  | `.pth`                   |
+| Upscaler — HAT            | `HAT/`                     | `.pth`                   |
+| Upscaler — RealESRGAN     | `RealESRGAN/`              | `.pth`                   |
+| Textual inversion         | `embeddings/` (top-level)  | `.safetensors`, `.pt`    |
+
+After dropping files into any of these, click the **Refresh** icon in
+the topbar (or `make rollout` if the cache is being stubborn).
+
+The nginx sidecar exposes two read-only mounts that drive the UI:
+
+- `/loras` — LoRA browsing for the picker.
+- `/nas` — the program "home" for typeable batch paths. Bind its
+  hostPath in `deployment.yaml` to whatever directory holds your
+  source images.
+
+---
 
 ## Updating Forge / Ultimate Upscale from upstream
 
-This is a manual operation I do every 6-12 months, or sooner if I want a
-specific upstream change. Both vendored folders ship without `.git`, so the
+Manual operation, done every 6–12 months or when a specific upstream
+change is needed. Both vendored folders ship without `.git`, so the
 first sync also initializes git history.
 
 ```sh
@@ -214,34 +199,34 @@ make build
 ```
 
 Same pattern for `ultimate-upscale/` with
-`https://github.com/Coyote-A/ultimate-upscale-for-automatic1111.git` and the
-`master` branch.
+`https://github.com/Coyote-A/ultimate-upscale-for-automatic1111.git`
+and the `master` branch.
 
-**Subsequent updates** are just `git fetch upstream && git merge upstream/<branch>`
-in each fork folder, followed by `make build`.
+Subsequent updates: `git fetch upstream && git merge upstream/<branch>`
+in each fork folder, then `make build`.
 
-If a fork's upstream becomes truly abandoned, I can swap it for a different
-fork (Forge2/reForge/ersatzForge, or another Ultimate Upscale fork) without
-touching anything outside that folder — the rest of the project never references
-the upstream URL.
+If a fork's upstream becomes truly abandoned, swap it for a different
+fork (Forge2 / reForge / ersatzForge, or another Ultimate Upscale
+fork) without touching anything outside that folder.
 
-## Why these choices
-
-- **Vendored forks, not GitHub clones.** Both upstreams have stalled in the
-  past; vendoring eliminates the "build broke because someone force-pushed"
-  failure mode.
-- **`--nowebui --api`.** Forge's Gradio UI is dead weight when the custom
-  frontend is the only consumer.
+---
 
 ## Troubleshooting
 
-- **`numpy.dtype size changed`** — the vendored Forge requirements still pin
-  numpy 1.x somewhere. Re-check the `sed` strip in the Dockerfile and the
-  override in `requirements.txt`.
-- **`CUDA error: no kernel image is available`** — torch wheels lack sm_120.
-  Verify with `python -c "import torch; print(torch.cuda.get_arch_list())"`.
-- **`xformers` warning at startup** — expected. `--disable-xformers` is
-  correct on Blackwell; native SDPA via `--use-pytorch-cross-attention` is
-  faster anyway.
-- **First generation slow** — torch JIT-compiles kernels per architecture.
-  Persist `/root/.cache/cuda` across pod restarts to keep the cache warm.
+- **`numpy.dtype size changed`** — the vendored Forge requirements
+  still pin numpy 1.x somewhere. Re-check the `sed` strip in the
+  Dockerfile and the override in `requirements.txt`.
+- **`CUDA error: no kernel image is available`** — torch wheels lack
+  sm_120. Verify with
+  `python -c "import torch; print(torch.cuda.get_arch_list())"`.
+- **`xformers` warning at startup** — expected. `--disable-xformers`
+  is correct on Blackwell; native SDPA via
+  `--use-pytorch-cross-attention` is faster anyway.
+- **First generation slow** — torch JIT-compiles kernels per
+  architecture. Persist `/root/.cache/cuda` across pod restarts to
+  keep the cache warm.
+- **Old pod stuck `Terminating`, new pod `Pending`** — GPU device
+  plugin not releasing on rolling update. Force-delete the wedged pod
+  (`kubectl delete pod <name> --force --grace-period=0`); the durable
+  fix is `strategy: { type: Recreate }` on the Deployment so the old
+  pod is gone before the new one is scheduled.

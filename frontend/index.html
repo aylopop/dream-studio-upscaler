@@ -42,14 +42,14 @@
   body {
     background: var(--bg);
     color: var(--label);
-    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', system-ui, sans-serif;
+    font-family: system-ui, sans-serif;
     font-size: 14px;
     line-height: 1.4;
     -webkit-font-smoothing: antialiased;
     letter-spacing: -0.005em;
     min-height: 100vh;
   }
-  .mono { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-feature-settings: 'tnum'; }
+  .mono { font-family: ui-monospace, monospace; font-feature-settings: 'tnum'; }
   button { font-family: inherit; }
   input, textarea, select { font-family: inherit; }
 
@@ -534,7 +534,7 @@
   .err-card.open { display: block; }
   .err-card .head { padding: 10px 14px; font-size: 13px; color: #ff6961; display: flex; align-items: center; gap: 8px; cursor: pointer; }
   .err-card .head .grow { flex: 1; }
-  .err-card .body { display: none; padding: 0 14px 12px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 11.5px; color: var(--label-2); white-space: pre-wrap; max-height: 280px; overflow: auto; }
+  .err-card .body { display: none; padding: 0 14px 12px; font-family: ui-monospace, monospace; font-size: 11.5px; color: var(--label-2); white-space: pre-wrap; max-height: 280px; overflow: auto; }
   .err-card.expanded .body { display: block; }
 
   /* Type-in numeric input that doubles as the slider's value display.
@@ -552,7 +552,7 @@
     padding: 3px 6px;
     border-radius: 5px;
     transition: background 100ms ease, color 100ms ease, border-color 100ms ease;
-    font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+    font-family: ui-monospace, monospace;
     font-feature-settings: 'tnum';
   }
   input.numin:hover { background: rgba(255,255,255,0.05); color: var(--label); border-color: var(--separator); }
@@ -568,7 +568,7 @@
   .queue-row { display: flex; align-items: center; gap: 8px; padding: 4px 8px; background: var(--surface-2); border-radius: 6px; }
   .queue-row.qrunning { background: var(--blue-soft); }
   .queue-row.qrunning .qtype { color: var(--blue); font-weight: 600; }
-  .queue-row .qtype { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 11px; color: var(--label-3); width: 56px; text-transform: uppercase; letter-spacing: 0.04em; }
+  .queue-row .qtype { font-family: ui-monospace, monospace; font-size: 11px; color: var(--label-3); width: 56px; text-transform: uppercase; letter-spacing: 0.04em; }
   /* min-width: 0 is the standard flexbox fix: without it, the qlbl
      child's intrinsic width is "as wide as the longest unbroken text",
      which prevents text-overflow from ever clipping. With min-width: 0
@@ -1086,7 +1086,7 @@
              raw caption (what CLIP said) and cleaned (what got injected). -->
         <div class="adv-row text" style="grid-template-columns: 130px 1fr; align-items: flex-start;">
           <div class="name" style="color: var(--label-3); font-weight: 400;">Last caption</div>
-          <div id="auto-prompt-panel" style="color: var(--label-3); font-size: 11.5px; line-height: 1.6; font-family: ui-monospace, 'SF Mono', Menlo, monospace; word-break: break-word;">
+          <div id="auto-prompt-panel" style="color: var(--label-3); font-size: 11.5px; line-height: 1.6; font-family: ui-monospace, monospace; word-break: break-word;">
             (none yet — run with Dream Assist on to populate)
           </div>
         </div>
@@ -1190,7 +1190,7 @@
             </div>
             <div class="adv-row text" style="grid-template-columns: 130px 1fr;">
               <div class="name">VRAM</div>
-              <div id="vram-widget" style="font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; color: var(--label-2);">
+              <div id="vram-widget" style="font-family: ui-monospace, monospace; font-size: 12px; color: var(--label-2);">
                 <div style="display:flex; align-items:center; gap:10px;">
                   <div style="flex:1; height:6px; background:var(--surface-2); border-radius:3px; overflow:hidden;">
                     <div id="vram-bar" style="height:100%; width:0%; background:var(--accent); transition: width 200ms ease, background 200ms ease;"></div>
@@ -1227,13 +1227,13 @@
             </div>
             <div class="adv-row text" style="grid-template-columns: 130px 1fr; align-items: flex-start;">
               <div class="name" style="color: var(--label-3); font-weight: 400;">Diagnostics</div>
-              <div id="diagnostics-panel" style="color: var(--label-3); font-size: 11.5px; line-height: 1.6; font-family: ui-monospace, 'SF Mono', Menlo, monospace;">
+              <div id="diagnostics-panel" style="color: var(--label-3); font-size: 11.5px; line-height: 1.6; font-family: ui-monospace, monospace;">
                 (loading…)
               </div>
             </div>
             <div class="adv-row text" style="grid-template-columns: 130px 1fr; align-items: flex-start; padding-top: 4px;">
               <div class="name" style="color: var(--label-3); font-weight: 400;">Forge state</div>
-              <div id="forge-state-panel" style="color: var(--label-3); font-size: 11.5px; line-height: 1.6; font-family: ui-monospace, 'SF Mono', Menlo, monospace; word-break: break-all;">
+              <div id="forge-state-panel" style="color: var(--label-3); font-size: 11.5px; line-height: 1.6; font-family: ui-monospace, monospace; word-break: break-all;">
                 (loading…)
               </div>
             </div>
@@ -1822,6 +1822,29 @@ function snapshotSettings() {
 function saveSettings() {
   try { localStorage.setItem(SETTINGS_LS_KEY, JSON.stringify(snapshotSettings())); }
   catch (e) { console.warn("[settings] save failed:", e); }
+}
+// Click-time snapshot of EVERYTHING a queued run needs, so the user
+// changing controls after queueing (denoise, prompt, CN model, etc.)
+// can't bleed back into the in-flight or pending task. Extends
+// snapshotSettings (shaped for localStorage) with the things that
+// only matter at run time: per-unit ControlNet images, the upscaler
+// INDEX (snapshotSettings only stores the name), and the source
+// image itself (bare base64 — no data: prefix, matching the rest of
+// the run pipeline). Used by the run-btn handler, the multi-file
+// drop handler, and the variant/batch wrappers — every entry into
+// the run queue snapshots once.
+function snapshotRun(initImageB64) {
+  const base = snapshotSettings();
+  return {
+    ...base,
+    init_image_b64: initImageB64 || null,
+    upscaler_idx: state.upscalerIdx,
+    cn: state.cn.map(c => ({
+      enabled: c.enabled, module: c.module, model: c.model,
+      weight: c.weight, start: c.start, end: c.end, mode: c.mode,
+      image: c.image,
+    })),
+  };
 }
 function loadSettings() {
   try {
@@ -2711,15 +2734,22 @@ dz.addEventListener("drop", async (e) => {
   // queued counts.
   loadImageData(await readAsDataUrl(files[0]));
   const dropVariants = Math.max(1, Math.min(8, parseInt($("variants").value) || 1));
+  // One snapshot for the whole drop, with the source image swapped per
+  // file. Same idea as the Run-click handler: settings the user changes
+  // after the drop can't bleed into queued tasks. Re-snapshotting per
+  // file would defeat the point — by file 3 the user might have nudged
+  // a slider and only files 3..N would see it.
+  const baseSnap = snapshotRun(null);
   for (let i = 0; i < files.length; i++) {
     const f = files[i];
     const dataUrl = await readAsDataUrl(f);
     const b64 = dataUrl.split(",")[1];
+    const snap = { ...baseSnap, init_image_b64: b64 };
     if (dropVariants > 1) {
       const label = `Drop · ${shortName(f.name)} ×${dropVariants}`;
-      pushQueueTask("variants", label, () => runVariantsForSource(b64, dropVariants, label));
+      pushQueueTask("variants", label, () => runVariantsForSource(snap, dropVariants, label));
     } else {
-      pushQueueTask("single", `Drop · ${shortName(f.name)}`, () => runSingle(b64));
+      pushQueueTask("single", `Drop · ${shortName(f.name)}`, () => runSingle(snap));
     }
   }
   const totalRuns = files.length * dropVariants;
@@ -2981,14 +3011,21 @@ function cacheInterrogateCaption(key, caption) {
 // Cheap synchronous cache check so callers can suppress the
 // "interrogating…" status flash on cache hits (otherwise the user
 // briefly sees the message even though no network call happens).
-function interrogateCacheHas(b64) {
+function interrogateCacheHas(b64, clipOverride, modeOverride) {
   if (!b64) return false;
-  const key = state.autoPromptClip + "/" + state.autoPromptMode + ":" + b64.length + ":" + b64.slice(0, 64);
+  const clip = clipOverride || state.autoPromptClip;
+  const mode = modeOverride || state.autoPromptMode;
+  const key = clip + "/" + mode + ":" + b64.length + ":" + b64.slice(0, 64);
   return _interrogateCache.has(key);
 }
-async function interrogateImage(b64) {
+// `clipOverride`/`modeOverride` come from the run snapshot so the
+// interrogate request matches the click-time auto-prompt config, not
+// whatever the live state has drifted to since queueing.
+async function interrogateImage(b64, clipOverride, modeOverride) {
   if (!b64) return "";
-  const key = state.autoPromptClip + "/" + state.autoPromptMode + ":" + b64.length + ":" + b64.slice(0, 64);
+  const clip = clipOverride || state.autoPromptClip;
+  const mode = modeOverride || state.autoPromptMode;
+  const key = clip + "/" + mode + ":" + b64.length + ":" + b64.slice(0, 64);
   if (_interrogateCache.has(key)) return _interrogateCache.get(key);
   let res;
   try {
@@ -2996,8 +3033,8 @@ async function interrogateImage(b64) {
       method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         image: b64,
-        clip_model_name: state.autoPromptClip,
-        mode: state.autoPromptMode,
+        clip_model_name: clip,
+        mode: mode,
       }),
     });
   } catch (e) {
@@ -3028,9 +3065,15 @@ const _lastAutoCaption = { raw: "", cleaned: "" };
 // Strip is word-boundary + case-insensitive. Regex chars in user
 // input are escaped so a stray "(" / "?" / etc. doesn't break the
 // matcher.
-function cleanCaption(raw) {
+// `stripOverride` (when supplied) is the snapshot's strip-words list, so
+// captions in queued runs use the words that were set at queue time, not
+// whatever the user has typed since. The UI panel re-clean (on strip-word
+// changes) passes nothing and gets the live list — that's the intended
+// surface for live preview.
+function cleanCaption(raw, stripOverride) {
   raw = (raw || "").trim();
-  const words = (state.autoPromptStripWords || "")
+  const wordsSrc = stripOverride != null ? stripOverride : state.autoPromptStripWords;
+  const words = (wordsSrc || "")
     .split(/[,\n]+/).map(s => s.trim()).filter(Boolean);
   let out = raw;
   for (const w of words) {
@@ -4036,11 +4079,11 @@ async function pollProgress() {
   } catch {}
 }
 
-function buildCNArgs() {
+function buildCNArgs(cnList) {
   const out = [];
   for (let i = 0; i < 3; i++) {
-    const c = state.cn[i];
-    if (!c.enabled) continue;
+    const c = cnList[i];
+    if (!c || !c.enabled) continue;
     out.push({
       enabled: true,
       module: c.module,
@@ -4070,24 +4113,25 @@ function numOr(id, fallback, parser) {
 }
 function intOr(id, fallback) { return numOr(id, fallback, parseInt); }
 
-function buildPayload(initImageB64) {
-  const scale    = numOr("scale",    2);
-  const tileW    = intOr("tilew",    1408);
-  const tileH    = intOr("tileh",    1408);
-  const maskBlur = intOr("maskblur", 8);
-  const padding  = intOr("padding",  32);
+// Build the img2img payload from a click-time snapshot (see snapshotRun).
+// initImageOverride lets batch/multi-file loops reuse one snapshot with a
+// different source image per iteration without re-snapshotting — which
+// would re-read live DOM/state and reintroduce the bleed we're avoiding.
+function buildPayload(snap, initImageOverride) {
+  const sl = snap.sliders;
+  const initImageB64 = initImageOverride || snap.init_image_b64;
 
   // Ultimate SD upscale script_args — 18 positional args (info + 17 fields)
   const script_args = [
     null,                // _ (gradio info field, ignored)
-    tileW,               // tile_width
-    tileH,               // tile_height
-    maskBlur,            // mask_blur
-    padding,             // padding
+    sl.tilew,            // tile_width
+    sl.tileh,            // tile_height
+    sl.maskblur,         // mask_blur
+    sl.padding,          // padding
     64,                  // seams_fix_width
     0.35,                // seams_fix_denoise
     16,                  // seams_fix_padding
-    state.upscalerIdx,   // upscaler_index
+    snap.upscaler_idx,   // upscaler_index
     true,                // save_upscaled_image
     0,                   // redraw_mode (0 = Linear)
     false,               // save_seams_fix_image
@@ -4095,23 +4139,23 @@ function buildPayload(initImageB64) {
     0,                   // seams_fix_type (0 = None)
     2,                   // target_size_type (2 = Scale from image size)
     2048, 2048,          // custom_width/height (unused at target_size_type=2)
-    scale,               // custom_scale
+    sl.scale,            // custom_scale
   ];
 
-  const cnArgs = buildCNArgs();
+  const cnArgs = buildCNArgs(snap.cn);
   const alwayson = cnArgs.length ? { ControlNet: { args: cnArgs } } : {};
 
   return {
     init_images: [initImageB64],
-    prompt: $("prompt").value,
-    negative_prompt: $("negative_prompt").value,
-    cfg_scale:          numOr("cfg",     5),
-    denoising_strength: numOr("denoise", 0.5),
-    steps:              intOr("steps",   20),
-    sampler_name: state.sampler,
-    sampler_index: state.sampler,
-    scheduler: state.scheduler,
-    seed: intOr("seed", -1),
+    prompt: snap.prompt,
+    negative_prompt: snap.negative_prompt,
+    cfg_scale:          sl.cfg,
+    denoising_strength: sl.denoise,
+    steps:              sl.steps,
+    sampler_name: snap.sampler,
+    sampler_index: snap.sampler,
+    scheduler: snap.scheduler,
+    seed: snap.seed,
     subseed: -1,
     subseed_strength: 0,
     resize_mode: 2,        // 2 = Resize and Fill (hidden, fixed)
@@ -4147,7 +4191,7 @@ function buildPayload(initImageB64) {
       outdir_img2img_samples: "outputs/img2img-images",
       outdir_img2img_grids:   "outputs/img2img-grids",
       // Sampling fidelity
-      CLIP_stop_at_last_layers: parseInt($("clipskip").value) || 1,
+      CLIP_stop_at_last_layers: sl.clipskip,
       randn_source: "GPU",
       token_merging_ratio: 0,
       // (do_not_add_watermark intentionally omitted — Forge Neo lacks the
@@ -4155,7 +4199,7 @@ function buildPayload(initImageB64) {
       // Checkpoint switch piggy-backs here when the user picked a new one.
       // Forge Neo's preset system requires more than just sd_model_checkpoint
       // — see buildCheckpointOverride for the full story.
-      ...buildCheckpointOverride(),
+      ...buildCheckpointOverride(snap.checkpoint),
     },
     override_settings_restore_afterwards: false,
   };
@@ -4177,16 +4221,22 @@ function buildPayload(initImageB64) {
 // Fix: send preset + per-family checkpoint + the legacy sd_model_checkpoint
 // together so the swap is coordinated end-to-end. cnFamilyOf classifies
 // the queued checkpoint by filename heuristic.
-function buildCheckpointOverride() {
-  if (!state.checkpoint || state.checkpoint === state.loadedCheckpoint) return {};
-  const out = { sd_model_checkpoint: state.checkpoint };
-  const fam = cnFamilyOf(state.checkpoint);
+function buildCheckpointOverride(targetCheckpoint) {
+  // `targetCheckpoint` comes from the click-time snapshot — what the user
+  // wanted when they queued this task. The "loaded" side is read LIVE on
+  // purpose: it reflects what Forge actually has in VRAM right now, which
+  // is what determines whether we still need to send the override. If a
+  // prior queued task already swapped to this checkpoint, no override is
+  // sent — correct.
+  if (!targetCheckpoint || targetCheckpoint === state.loadedCheckpoint) return {};
+  const out = { sd_model_checkpoint: targetCheckpoint };
+  const fam = cnFamilyOf(targetCheckpoint);
   if (fam === "sdxl") {
     out.forge_preset = "xl";
-    out.forge_checkpoint_xl = state.checkpoint;
+    out.forge_checkpoint_xl = targetCheckpoint;
   } else if (fam === "sd15") {
     out.forge_preset = "sd";
-    out.forge_checkpoint_sd = state.checkpoint;
+    out.forge_checkpoint_sd = targetCheckpoint;
   }
   return out;
 }
@@ -4311,7 +4361,7 @@ async function submitImg2Img(payload) {
   return res.json();
 }
 
-async function runSingle(initB64, seedOverride, jitterStrengthIdx, prependCaption) {
+async function runSingle(snap, seedOverride, jitterStrengthIdx, prependCaption) {
   // Hide the compare slider while a run is in flight so the live preview
   // painting into the dropzone is visible. Slider re-shows on completion
   // via showResultImage → updateCompareSlider.
@@ -4324,7 +4374,7 @@ async function runSingle(initB64, seedOverride, jitterStrengthIdx, prependCaptio
   const _runStart = performance.now();
   pollHandle = setInterval(pollProgress, 500);
   try {
-    const payload = buildPayload(initB64);
+    const payload = buildPayload(snap);
     // When called from the variant loop, force a random seed for every
     // variant past the first so we don't generate the same image N times.
     if (Number.isFinite(seedOverride)) payload.seed = seedOverride;
@@ -4344,10 +4394,13 @@ async function runSingle(initB64, seedOverride, jitterStrengthIdx, prependCaptio
       if (prependCaption) {
         payload.prompt = payload.prompt ? `${prependCaption}, ${payload.prompt}` : prependCaption;
       }
-    } else if (state.autoPrompt) {
-      if (!interrogateCacheHas(initB64)) setStatus("Dream Assist: reading source…");
+    } else if (snap.auto_prompt) {
+      if (!interrogateCacheHas(snap.init_image_b64, snap.auto_prompt_clip, snap.auto_prompt_mode)) setStatus("Dream Assist: reading source…");
       try {
-        const caption = cleanCaption(await interrogateImage(initB64));
+        const caption = cleanCaption(
+          await interrogateImage(snap.init_image_b64, snap.auto_prompt_clip, snap.auto_prompt_mode),
+          snap.auto_prompt_strip,
+        );
         if (caption) {
           payload.prompt = payload.prompt ? `${caption}, ${payload.prompt}` : caption;
         }
@@ -4356,8 +4409,8 @@ async function runSingle(initB64, seedOverride, jitterStrengthIdx, prependCaptio
     // If a checkpoint swap is riding on this request, surface it — the
     // first run after a switch can hang for 10-30s while Forge swaps
     // weights, and an unexplained pause looks like a hang.
-    if (state.checkpoint && state.checkpoint !== state.loadedCheckpoint) {
-      const m = state.models.find(x => x.title === state.checkpoint);
+    if (snap.checkpoint && snap.checkpoint !== state.loadedCheckpoint) {
+      const m = state.models.find(x => x.title === snap.checkpoint);
       setStatus(`switching to ${m?.model_name || "new checkpoint"} (first run is slow)…`);
     }
     const data = await submitImg2Img(payload);
@@ -4374,9 +4427,9 @@ async function runSingle(initB64, seedOverride, jitterStrengthIdx, prependCaptio
       // Also re-fetch the CN model list: Forge filters it by checkpoint
       // family, so an SDXL↔SD1.5 switch changes which CN models are
       // visible, and the user's picks may need to update.
-      if (state.checkpoint && state.checkpoint !== state.loadedCheckpoint) {
-        state.loadedCheckpoint = state.checkpoint;
-        pushRecentCkpt(state.checkpoint);   // remember what we actually used
+      if (snap.checkpoint && snap.checkpoint !== state.loadedCheckpoint) {
+        state.loadedCheckpoint = snap.checkpoint;
+        pushRecentCkpt(snap.checkpoint);   // remember what we actually used
         refreshCheckpointLabel();
         refreshCNModelList().catch(() => {});
       }
@@ -4419,17 +4472,22 @@ async function runSingle(initB64, seedOverride, jitterStrengthIdx, prependCaptio
 // `taskLabelPrefix` is what shows in the queue panel — caller picks
 // "Variants ×N" for a click-Run set, "Drop · foo.png ×N" for a dropped
 // file, etc.
-async function runVariantsForSource(b64, variants, taskLabelPrefix) {
-  const baseJitter = parseInt($("variant-jitter").value) || 0;
+async function runVariantsForSource(snap, variants, taskLabelPrefix) {
+  const baseJitter = snap.sliders.variant_jitter;
+  const b64 = snap.init_image_b64;
   // Auto-prompt fires once for the whole variant set — the caption
   // describes the source, so re-interrogating per variant would hit
   // the cache anyway. Pre-compute, surface any failure, pass into
   // each runSingle so its own auto-prompt path is bypassed.
   let captionPrefix;
-  if (state.autoPrompt) {
-    if (!interrogateCacheHas(b64)) setStatus(`Dream Assist: reading source (shared across ${variants} variants)…`);
-    try { captionPrefix = cleanCaption(await interrogateImage(b64)); }
-    catch (e) { failAutoPrompt(e); return; }
+  if (snap.auto_prompt) {
+    if (!interrogateCacheHas(b64, snap.auto_prompt_clip, snap.auto_prompt_mode)) setStatus(`Dream Assist: reading source (shared across ${variants} variants)…`);
+    try {
+      captionPrefix = cleanCaption(
+        await interrogateImage(b64, snap.auto_prompt_clip, snap.auto_prompt_mode),
+        snap.auto_prompt_strip,
+      );
+    } catch (e) { failAutoPrompt(e); return; }
   }
   for (let v = 0; v < variants; v++) {
     setStatus(`variant ${v + 1} of ${variants}…`);
@@ -4439,18 +4497,22 @@ async function runVariantsForSource(b64, variants, taskLabelPrefix) {
     // strength scales per-variant when detailer is on AND variants>2
     // so an 8-variant run actually spreads across the range.
     const effIdx = variantEffectiveIdx(baseJitter, v, variants);
-    await runSingle(b64, v > 0 ? -1 : undefined, effIdx, captionPrefix);
+    await runSingle(snap, v > 0 ? -1 : undefined, effIdx, captionPrefix);
   }
 }
 
 // Resolve a user-typed path against /nas/ (the program home). All input is
-async function runBatch(inputDirRaw, variants) {
+// taken from the click-time snapshot — `snap.batch_in` is the typed path,
+// `snap.sliders.variant_jitter` etc. — so settings the user changes mid-
+// batch don't bleed into the in-flight loop.
+async function runBatch(snap, variants) {
   variants = Math.max(1, Math.min(8, parseInt(variants) || 1));
+  const inputDirRaw = snap.batch_in || "";
   // Resolve the user-typed batch path against /nas/. Strip leading
   // slashes and any explicit "nas/" prefix so they can't escape into
   // /loras/ or /sdapi/ by accident. Trailing slash matters for nginx
   // autoindex's JSON listing.
-  let inputDir = (inputDirRaw || "").trim().replace(/^\/+/, "");
+  let inputDir = inputDirRaw.trim().replace(/^\/+/, "");
   if (inputDir.startsWith("nas/")) inputDir = inputDir.slice(4);
   inputDir = "/nas/" + inputDir;
   if (!inputDir.endsWith("/")) inputDir += "/";
@@ -4466,6 +4528,7 @@ async function runBatch(inputDirRaw, variants) {
   const files = entries.filter(e => /\.(png|jpe?g|webp)$/i.test(e.name || ""));
   if (!files.length) throw new Error(`no images in ${inputDir}`);
 
+  const baseJitter = snap.sliders.variant_jitter;
   for (let i = 0; i < files.length; i++) {
     const url = inputDir + files[i].name;
     const blob = await fetch(url).then(r => r.blob());
@@ -4473,12 +4536,16 @@ async function runBatch(inputDirRaw, variants) {
 
     // Auto-prompt happens once per batch image (cached for any variants
     // off the same source). Caption gets baked into a base payload that
-    // we then clone per variant.
-    let captionPayload = buildPayload(b64);
-    if (state.autoPrompt) {
-      if (!interrogateCacheHas(b64)) setStatus(`batch ${i + 1}/${files.length}: Dream Assist…`);
+    // we then clone per variant. buildPayload(snap, b64) reuses the
+    // queued snapshot with this iteration's source image.
+    let captionPayload = buildPayload(snap, b64);
+    if (snap.auto_prompt) {
+      if (!interrogateCacheHas(b64, snap.auto_prompt_clip, snap.auto_prompt_mode)) setStatus(`batch ${i + 1}/${files.length}: Dream Assist…`);
       try {
-        const caption = cleanCaption(await interrogateImage(b64));
+        const caption = cleanCaption(
+          await interrogateImage(b64, snap.auto_prompt_clip, snap.auto_prompt_mode),
+          snap.auto_prompt_strip,
+        );
         if (caption) {
           captionPayload.prompt = captionPayload.prompt ? `${caption}, ${captionPayload.prompt}` : caption;
         }
@@ -4501,7 +4568,6 @@ async function runBatch(inputDirRaw, variants) {
       const payload = JSON.parse(JSON.stringify(captionPayload));
       if (v > 0) {
         payload.seed = -1;
-        const baseJitter = parseInt($("variant-jitter").value) || 0;
         applyVariantJitter(payload, variantEffectiveIdx(baseJitter, v, variants));
       }
       try {
@@ -4669,9 +4735,11 @@ $("run-btn").addEventListener("click", () => {
     }
   }
 
-  // Snapshot run config at click-time so UI changes after queueing don't
-  // alter the queued task. (E.g., bump scale, click Run again, the first
-  // task still uses the original scale.)
+  // Snapshot run config at click time so UI changes after queueing don't
+  // alter the queued task. Every closure below closes over `snap`, and
+  // buildPayload/runSingle/etc. read settings from snap, not live DOM.
+  // (E.g., bump scale, click Run again, the first task still uses the
+  // original scale; same goes for prompt, denoise, CN model, etc.)
   const inDir = $("batch_in").value.trim();
   const initB64 = state.initImage_b64 ? state.initImage_b64.split(",")[1] : null;
   if (!inDir && !initB64) {
@@ -4679,15 +4747,16 @@ $("run-btn").addEventListener("click", () => {
     return;
   }
   const variants = Math.max(1, Math.min(8, parseInt($("variants").value) || 1));
+  const snap = snapshotRun(initB64);
 
   if (inDir) {
     const label = variants > 1 ? `Batch · ${inDir} ×${variants}` : `Batch · ${inDir}`;
-    pushQueueTask("batch", label, () => runBatch(inDir, variants));
+    pushQueueTask("batch", label, () => runBatch(snap, variants));
   } else if (variants > 1) {
     pushQueueTask("variants", `Variants ×${variants}`,
-      () => runVariantsForSource(initB64, variants, `Variants ×${variants}`));
+      () => runVariantsForSource(snap, variants, `Variants ×${variants}`));
   } else {
-    pushQueueTask("single", "Single upscale", () => runSingle(initB64));
+    pushQueueTask("single", "Single upscale", () => runSingle(snap));
   }
   if (!workerActive) setStatus("submitting…");
 });
