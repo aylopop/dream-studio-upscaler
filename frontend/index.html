@@ -2250,9 +2250,12 @@ function showResultImage(b64, payload, info) {
   state.resultImage_b64 = b64;
   // Remember which source produced this result so updateCompareSlider can
   // refuse to auto-pair it with whatever's currently shown as the source.
-  // payload.init_images[0] is base64 without the data: prefix; normalise.
-  const srcB64 = payload?.init_images?.[0];
-  state.lastResultSource_b64 = srcB64 ? pngDataUrl(srcB64) : null;
+  // Stored as bare base64 (matching payload.init_images[0]'s natural form)
+  // so the comparison doesn't care about MIME-prefix drift between data:
+  // URLs — pngDataUrl hardcodes image/png, but state.initImage_b64 carries
+  // the source file's actual MIME (image/jpeg, image/webp, ...). Comparing
+  // data URLs directly false-mismatched on every non-PNG source.
+  state.lastResultSource_b64 = payload?.init_images?.[0] || null;
   setBgImage(dz, dataUrl);
   pushHistory(dataUrl, payload, info);
   // Compare slider may still have stale bg-images from a prior force-open
@@ -2302,20 +2305,23 @@ function updateCompareSlider() {
     return;
   }
   cmpInd.classList.remove("show");
-  const src = state.initImage_b64;
-  const resB64 = state.resultImage_b64;
-  const resDataUrl = resB64 ? pngDataUrl(resB64) : null;
-  // Source-vs-result auto-slider should only appear when the result was
-  // generated from the CURRENT source. With multi-file queues, the last
-  // result may be of a totally different image — pairing it with the
-  // displayed source would surface an unrelated A/B (the exact bug:
-  // moonlit-fantasy on the left, cyberpunk-city on the right, neither
-  // being the source-of or result-of the other).
-  const resultMatchesSource = resDataUrl && state.lastResultSource_b64 === src;
-  const show = src && resDataUrl && src !== resDataUrl && resultMatchesSource;
+  // Paint source-vs-result strictly from the result-side pair:
+  // state.lastResultSource_b64 is the source that produced state.resultImage_b64
+  // (both are set together in showResultImage and in the history-rehydration
+  // paths). state.initImage_b64 is the *next* run's input and can drift away
+  // from the displayed result — e.g., clicking a history thumb while a run is
+  // in flight mutates initImage_b64 even though the result that's about to
+  // come back was generated from the original source. Reading from
+  // lastResultSource_b64 keeps the slider's source/result halves
+  // pair-consistent regardless of how initImage_b64 has been moved.
+  const srcBare = state.lastResultSource_b64;
+  const resB64  = state.resultImage_b64;
+  const srcUrl  = srcBare ? pngDataUrl(srcBare) : null;
+  const resUrl  = resB64  ? pngDataUrl(resB64)  : null;
+  const show    = srcUrl && resUrl && srcUrl !== resUrl;
   if (show) {
-    $("compare-source").style.backgroundImage = `url("${src}")`;
-    $("compare-result").style.backgroundImage = `url("${resDataUrl}")`;
+    $("compare-source").style.backgroundImage = `url("${srcUrl}")`;
+    $("compare-result").style.backgroundImage = `url("${resUrl}")`;
     slider.classList.add("show");
   } else {
     slider.classList.remove("show");
@@ -2400,7 +2406,7 @@ function renderHistory() {
         const resultB64 = (item.src || "").startsWith("data:") ? item.src.split(",")[1] : null;
         state.initImage_b64 = srcDataUrl;
         state.resultImage_b64 = resultB64;
-        state.lastResultSource_b64 = srcDataUrl;
+        state.lastResultSource_b64 = srcB64;     // bare base64 — matches the storage form set in showResultImage
         setBgImage(dz, dataUrl);   // show the thumb (the upscale) in the dropzone
       }
       updateCompareSlider();
@@ -2776,23 +2782,20 @@ $("img-source-toggle").addEventListener("click", (e) => {
     syncSourceToggleBtn();
     return;
   }
-  const src = state.initImage_b64;
-  const resB64 = state.resultImage_b64;
-  if (!src) { setStatus("no source loaded", "err"); return; }
-  if (!resB64) { setStatus("no result yet — run an upscale first", "err"); return; }
-  // Mismatch guard: in queued multi-file runs, state.initImage_b64 stays
-  // pinned to the FIRST file dropped, but state.resultImage_b64 gets
-  // overwritten by every completing task. That can leave us in a state
-  // where the recorded source (state.lastResultSource_b64) doesn't
-  // match what's currently displayed. Pairing them in the slider would
-  // show two unrelated images side by side (e.g. file-1 source vs
-  // file-3 upscale). Refuse the open with a clear message; user can
-  // run an upscale on the current source to make them match.
-  if (state.lastResultSource_b64 && state.lastResultSource_b64 !== src) {
-    setStatus("last result was for a different source — run an upscale on the current image to compare", "err");
+  // Paint from the result-side pair (lastResultSource_b64 + resultImage_b64).
+  // These are set together in showResultImage and in the history-rehydration
+  // paths, so they're always pair-consistent. state.initImage_b64 is the
+  // next run's input and is allowed to drift (thumb clicks, drops mid-queue,
+  // etc.); using it here is what produced the spurious "different source"
+  // errors previously guarded against. No mismatch check needed — there
+  // can't be a mismatch between the pair and itself.
+  const srcBare = state.lastResultSource_b64;
+  const resB64  = state.resultImage_b64;
+  if (!srcBare || !resB64) {
+    setStatus("nothing to compare yet — run an upscale first", "err");
     return;
   }
-  $("compare-source").style.backgroundImage = `url("${src}")`;
+  $("compare-source").style.backgroundImage = `url("${pngDataUrl(srcBare)}")`;
   $("compare-result").style.backgroundImage = `url("${pngDataUrl(resB64)}")`;
   slider.classList.add("show");
   $("cmp-indicator").classList.remove("show");
